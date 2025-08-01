@@ -3,6 +3,9 @@ const mongoose = require("mongoose");
 const path = require("path");
 const app = express();
 const dotenv = require('dotenv');
+const swaggerUi = require("swagger-ui-express");
+const fs = require('fs');
+
 dotenv.config();
 const PORT = 5000;
 
@@ -15,6 +18,15 @@ const notesRoutes = require('./routes/notesRoute');
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Swagger setup with error handling
+let swaggerDocument;
+try {
+  swaggerDocument = require("./utils/swagger-output.json");
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+} catch (error) {
+  console.log("Swagger documentation not found. Run 'node utils/swagger.js' to generate it.");
+}
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -33,9 +45,7 @@ app.use((err, req, res, next) => {
 
 // Connect MongoDB
 mongoose
-  .connect(
-    "mongodb+srv://usman53307:fAJ5TpEc83jOCKpr@cluster0.pkfrj9c.mongodb.net/testingbackend"
-  )
+  .connect(process.env.MONGODB_URI)
   .then(() => console.log("MongoDB connected"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
