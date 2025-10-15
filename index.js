@@ -44,13 +44,39 @@ app.use((err, req, res, next) => {
 });
 
 // Connect MongoDB
-mongoose
-  .connect(
-    "mongodb+srv://usman53307:fAJ5TpEc83jOCKpr@cluster0.pkfrj9c.mongodb.net/testingbackend"
-  )
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error("MongoDB connection error:", err));
+const mongoUri = process.env.MONGODB_URI;
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+if (!mongoUri) {
+  console.error("Missing MONGODB_URI in environment. Please set it in your .env file.");
+  process.exit(1);
+}
+
+mongoose.connection.on('connected', () => {
+  console.log('MongoDB connection established');
 });
+
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.warn('MongoDB connection disconnected');
+});
+
+mongoose
+  .connect(mongoUri, {
+    serverSelectionTimeoutMS: 10000,
+    socketTimeoutMS: 20000,
+    retryWrites: true,
+    w: 'majority',
+  })
+  .then(() => {
+    console.log("MongoDB connected");
+    app.listen(PORT, () => {
+      console.log(`Server running at http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("MongoDB connection error:", err);
+    process.exit(1);
+  });
