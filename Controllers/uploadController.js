@@ -2,14 +2,12 @@ const UploadedFile = require("../models/uploadModel");
 
 const uploadFile = async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
-    }
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
     const fileDoc = await UploadedFile.create({
       originalname: req.file.originalname,
-      filename: req.file.filename,
-      filepath: `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`,
+      filename: req.file.filename, // Cloudinary public_id
+      filepath: req.file.path,     // Cloudinary URL
     });
 
     res.status(201).json({
@@ -33,7 +31,7 @@ const uploadMultipleFiles = async (req, res) => {
         UploadedFile.create({
           originalname: file.originalname,
           filename: file.filename,
-          filepath: `${req.protocol}://${req.get("host")}/uploads/${file.filename}`,
+          filepath: file.path,
         })
       )
     );
@@ -48,9 +46,4 @@ const uploadMultipleFiles = async (req, res) => {
   }
 };
 
-
-module.exports = { 
-  uploadFile, 
-  uploadMultipleFiles, 
- 
-};
+module.exports = { uploadFile, uploadMultipleFiles };
