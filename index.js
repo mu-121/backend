@@ -14,6 +14,7 @@ const userRoutes = require('./routes/userRoutes');
 const projectRoutes = require('./routes/projectRoute');
 const uploadRoutes = require('./routes/uploadRoutes');
 const notesRoutes = require('./routes/notesRoute');
+const postRoutes = require('./routes/postRoute')
 
 // Middleware
 app.use(express.json());
@@ -36,7 +37,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/notes', notesRoutes);
-
+app.use('/api/posts', postRoutes);
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
