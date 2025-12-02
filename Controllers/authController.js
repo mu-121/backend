@@ -202,5 +202,20 @@ const resetPassword = async (req, res) => {
     res.status(500).json({ message: "Something went wrong" });
   }
 };
+const getUsers = async (req, res) => {
+  try {
+    const loggedInUserId = req.user.id; // from auth middleware
 
-module.exports = { signup, signin, verifyOtp, resendOtp, forgotPassword,resetPassword };
+    // Fetch all users except the logged-in user
+    const users = await User.find({ _id: { $ne: loggedInUserId } }).select(
+      "-password -otp -otpExpiresAt"
+    ); // exclude sensitive fields
+
+    res.status(200).json({ users });
+  } catch (error) {
+    console.error("Get users error:", error);
+    res.status(500).json({ message: "Something went wrong" });
+  }
+};
+
+module.exports = { signup, signin, verifyOtp, resendOtp, forgotPassword,resetPassword,getUsers };

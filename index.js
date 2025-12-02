@@ -1,26 +1,31 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const path = require("path");
-const app = express();
-const dotenv = require('dotenv');
+const dotenv = require("dotenv");
 const swaggerUi = require("swagger-ui-express");
-const fs = require('fs');
-
+const fs = require("fs");
+const http = require("http");
+const { Server } = require("socket.io");
+const cors = require("cors");
 dotenv.config();
-const PORT = 5000;
 
-// Import routes
-const userRoutes = require('./routes/userRoutes');
-const projectRoutes = require('./routes/projectRoute');
-const uploadRoutes = require('./routes/uploadRoutes');
-const notesRoutes = require('./routes/notesRoute');
-const postRoutes = require('./routes/postRoute')
+const app = express();
+const server = http.createServer(app);  // IMPORTANT for Socket.io
+const io = new Server(server, {
+  cors: { origin: "*" },
+});
 
-// Middleware
+const PORT = process.env.PORT || 5000;
+app.use(cors({
+  origin: "http://localhost:5174", // your frontend URL
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: true, // if you are sending cookies/auth headers
+}));
+// ---------- Middleware ----------
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Swagger setup with error handling
+// ---------- Swagger ----------
 let swaggerDocument;
 try {
   swaggerDocument = require("./utils/swagger-output.json");
@@ -29,40 +34,71 @@ try {
   console.log("Swagger documentation not found. Run 'node utils/swagger.js' to generate it.");
 }
 
-// Serve static files from uploads directory
+// ---------- Static Uploads ----------
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Routes
+// ---------- Import Routes ----------
+const userRoutes = require('./routes/userRoutes');
+const projectRoutes = require('./routes/projectRoute');
+const uploadRoutes = require('./routes/uploadRoutes');
+const notesRoutes = require('./routes/notesRoute');
+const postRoutes = require('./routes/postRoute');
+const chatRoutes = require('./routes/chatRoute');
+const messageRoutes = require('./routes/messageRoute');
+
+// ---------- Register Routes ----------
 app.use('/api/users', userRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/posts', postRoutes);
-// Error handling middleware
+app.use('/api/chat', chatRoutes);
+app.use('/api/message', messageRoutes);
+
+// ---------- Error Handler ----------
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error("Error:", err.stack);
   res.status(500).json({ message: 'Something went wrong!' });
 });
 
-// Connect MongoDB
+// -----------------------------------------
+//            🔥 SOCKET.IO SETUP
+// -----------------------------------------
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
+
+  // Join chat room
+  socket.on("join_chat", (chatId) => {
+    socket.join(chatId);
+    console.log("User joined chat:", chatId);
+  });
+
+  // Send + broadcast message
+  socket.on("send_message", (message) => {
+    io.to(message.chat).emit("receive_message", message);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected", socket.id);
+  });
+});
+
+// Make IO available in controllers if needed
+app.set("io", io);
+
+// -----------------------------------------
+//            🔥 MONGO CONNECTION
+// -----------------------------------------
 const mongoUri = process.env.MONGODB_URI;
 
 if (!mongoUri) {
-  console.error("Missing MONGODB_URI in environment. Please set it in your .env file.");
+  console.error("❌ Missing MONGODB_URI in .env");
   process.exit(1);
 }
 
-mongoose.connection.on('connected', () => {
-  console.log('MongoDB connection established');
-});
-
-mongoose.connection.on('error', (err) => {
-  console.error('MongoDB connection error:', err);
-});
-
-mongoose.connection.on('disconnected', () => {
-  console.warn('MongoDB connection disconnected');
-});
+mongoose.connection.on('connected', () => console.log('MongoDB connected'));
+mongoose.connection.on('error', (err) => console.error('MongoDB error:', err));
+mongoose.connection.on('disconnected', () => console.log('MongoDB disconnected'));
 
 mongoose
   .connect(mongoUri, {
@@ -72,12 +108,13 @@ mongoose
     w: 'majority',
   })
   .then(() => {
-    console.log("MongoDB connected");
-    app.listen(PORT, () => {
-      console.log(`Server running at http://localhost:${PORT}`);
+    console.log("MongoDB connection successful");
+
+    server.listen(PORT, () => {           // IMPORTANT: server.listen (not app.listen)
+      console.log(`🚀 Server running at http://localhost:${PORT}`);
     });
   })
   .catch((err) => {
-    console.error("MongoDB connection error:", err);
+    console.error("MONGO ERROR:", err);
     process.exit(1);
   });
