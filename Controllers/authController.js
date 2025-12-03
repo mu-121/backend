@@ -204,13 +204,8 @@ const resetPassword = async (req, res) => {
 };
 const getUsers = async (req, res) => {
   try {
-    const loggedInUserId = req.user.id; // from auth middleware
-
-    // Fetch all users except the logged-in user
-    const users = await User.find({ _id: { $ne: loggedInUserId } }).select(
-      "-password -otp -otpExpiresAt"
-    ); // exclude sensitive fields
-
+    // Fetch all users (exclude sensitive fields)
+    const users = await User.find({}).select("-password -otp -otpExpiresAt");
     res.status(200).json({ users });
   } catch (error) {
     console.error("Get users error:", error);
