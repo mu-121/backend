@@ -2,6 +2,7 @@ require("dotenv").config();
 const User = require("../models/userModal");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const cloudinary = require("../config/cloudinary");
 const sendOTPEmail = require("../utils/sendotp");
 // SIGN UP
 const signup = async (req, res) => {
@@ -202,6 +203,67 @@ const resetPassword = async (req, res) => {
     res.status(500).json({ message: "Something went wrong" });
   }
 };
+const updateProfile = async (req, res) => {
+  try {
+    if (!req.user?._id) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Fields that can be updated directly from the body
+    const allowedFields = [
+      "name",
+      "bio",
+      "phone",
+      "location",
+      "profileImageUrl",
+      "profileImageId",
+    ];
+    const updates = {};
+
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    });
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (req.file) {
+      // Remove old asset if present to avoid orphaned files
+      if (user.profileImageId) {
+        try {
+          await cloudinary.uploader.destroy(user.profileImageId);
+        } catch (err) {
+          console.warn("Failed to cleanup old profile image:", err.message);
+        }
+      }
+
+      updates.profileImageUrl = req.file.path;
+      updates.profileImageId = req.file.filename;
+    }
+
+    Object.assign(user, updates);
+    await user.save();
+
+    const sanitizedUser = user.toObject();
+    delete sanitizedUser.password;
+    delete sanitizedUser.otp;
+    delete sanitizedUser.otpExpiresAt;
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user: sanitizedUser,
+    });
+  } catch (error) {
+    console.error("Update profile error:", error);
+    res.status(500).json({ message: "Something went wrong" });
+  }
+};
+
 const getUsers = async (req, res) => {
   try {
     // Fetch all users (exclude sensitive fields)
@@ -213,4 +275,4 @@ const getUsers = async (req, res) => {
   }
 };
 
-module.exports = { signup, signin, verifyOtp, resendOtp, forgotPassword,resetPassword,getUsers };
+module.exports = { signup, signin, verifyOtp, resendOtp, forgotPassword,resetPassword,getUsers,updateProfile };
