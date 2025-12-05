@@ -101,6 +101,11 @@ const signin = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
+    // Mark user as online on successful login
+    user.status = "online";
+    user.lastSeen = new Date();
+    await user.save();
+
     const token = jwt.sign(
       { id: user._id, email: user.email },
       process.env.JWT_SECRET,
@@ -110,11 +115,34 @@ const signin = async (req, res) => {
 
     res.status(200).json({
       message: "Login successful",
-      user: { name: user.name, email: user.email },
+      user: { name: user.name, email: user.email, status: user.status },
       token,
     });
   } catch (error) {
     console.error("Signin error:", error);
+    res.status(500).json({ message: "Something went wrong" });
+  }
+};
+
+// LOG OUT
+const logout = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    user.status = "offline";
+    user.lastSeen = new Date();
+    await user.save();
+
+    res.status(200).json({
+      message: "Logout successful",
+      lastSeen: user.lastSeen,
+    });
+  } catch (error) {
+    console.error("Logout error:", error);
     res.status(500).json({ message: "Something went wrong" });
   }
 };
@@ -275,4 +303,4 @@ const getUsers = async (req, res) => {
   }
 };
 
-module.exports = { signup, signin, verifyOtp, resendOtp, forgotPassword,resetPassword,getUsers,updateProfile };
+module.exports = { signup, signin, verifyOtp, resendOtp, forgotPassword,resetPassword,getUsers,updateProfile,logout };

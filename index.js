@@ -78,6 +78,17 @@ io.on("connection", (socket) => {
     io.to(message.chat).emit("receive_message", message);
   });
 
+  // Typing indicators (broadcast to everyone else in the room)
+  socket.on("typing", ({ chatId, user }) => {
+    if (!chatId) return;
+    socket.to(chatId).emit("typing", { chatId, user });
+  });
+
+  socket.on("stop_typing", ({ chatId, user }) => {
+    if (!chatId) return;
+    socket.to(chatId).emit("stop_typing", { chatId, user });
+  });
+
   socket.on("disconnect", () => {
     console.log("User disconnected", socket.id);
   });
