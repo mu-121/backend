@@ -17,7 +17,7 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 5000;
 app.use(cors({
-  origin: "http://localhost:5174", // your frontend URL
+  origin: "http://localhost:5173", // your frontend URL
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   credentials: true, // if you are sending cookies/auth headers
 }));
