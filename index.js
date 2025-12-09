@@ -45,6 +45,7 @@ const notesRoutes = require('./routes/notesRoute');
 const postRoutes = require('./routes/postRoute');
 const chatRoutes = require('./routes/chatRoute');
 const messageRoutes = require('./routes/messageRoute');
+const zegoRoutes = require('./routes/zegoRoute');
 
 // ---------- Register Routes ----------
 app.use('/api/users', userRoutes);
@@ -54,6 +55,7 @@ app.use('/api/notes', notesRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/message', messageRoutes);
+app.use('/api/zego', zegoRoutes);
 
 // ---------- Error Handler ----------
 app.use((err, req, res, next) => {
